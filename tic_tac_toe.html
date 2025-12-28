@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Extreme Tic Tac Toe - Tahsan Farhad Ovi</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Poppins:wght@300;600&display=swap');
+
+        * { box-sizing: border-box; touch-action: manipulation; }
+
+        body { 
+            margin: 0; overflow: hidden; 
+            background: radial-gradient(circle, #1a0a2e 0%, #050510 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; width: 100vw; font-family: 'Poppins', sans-serif;
+        }
+
+        /* Hexagon Background Effect */
+        #bg-pattern {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+            opacity: 0.3; z-index: -1;
+        }
+
+        h1 { 
+            font-family: 'Orbitron', sans-serif; color: #fff; 
+            /* clamp(min, preferred, max) ব্যবহার করা হয়েছে */
+            font-size: clamp(24px, 8vw, 36px); 
+            margin: 10px 0 0 0; text-shadow: 0 0 15px #bc13fe; 
+            letter-spacing: 4px; text-align: center;
+        }
+
+        .credit { 
+            font-family: 'Orbitron', sans-serif; font-weight: 900; 
+            font-size: clamp(14px, 4vw, 18px); 
+            margin-bottom: 20px;
+            color: #00d2ff; text-shadow: 0 0 10px #00d2ff; text-align: center;
+        }
+
+        #status { font-size: 14px; margin-bottom: 10px; color: #bc13fe; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; }
+
+        /* Premium Cyberpunk Board */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 8px; 
+            background: rgba(188, 19, 254, 0.1); 
+            padding: 15px; 
+            border-radius: 20px; 
+            box-shadow: 0 0 40px rgba(188, 19, 254, 0.3), inset 0 0 20px rgba(0, 210, 255, 0.1); 
+            border: 3px solid #bc13fe; 
+            backdrop-filter: blur(15px);
+            width: 92vw; max-width: 420px;
+            aspect-ratio: 1 / 1;
+        }
+
+        .cell { 
+            background: rgba(20, 10, 40, 0.8); border-radius: 10px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 7vw; font-weight: bold; cursor: pointer; transition: 0.3s;
+            border: 1px solid rgba(188, 19, 254, 0.4);
+            aspect-ratio: 1 / 1;
+            position: relative;
+        }
+
+        @media (min-width: 600px) { .cell { font-size: 28px; } h1 { font-size: 40px; } .credit { font-size: 20px; } }
+
+        .cell:hover { background: rgba(188, 19, 254, 0.2); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(188, 19, 254, 0.4); }
+
+        .cell.x { color: #f1c40f; text-shadow: 0 0 15px #f1c40f; font-family: 'Orbitron'; }
+        .cell.o { color: #00d2ff; text-shadow: 0 0 15px #00d2ff; font-family: 'Orbitron'; }
+
+        /* Result Overlay */
+        #overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(10, 5, 20, 0.98); display: none; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 1000; text-align: center; padding: 30px;
+        }
+
+        .animate-text {
+            font-family: 'Orbitron', sans-serif; font-size: 28px; margin-bottom: 40px;
+            animation: glowPulse 1.5s infinite alternate; line-height: 1.4;
+        }
+
+        @keyframes glowPulse {
+            from { transform: scale(1); opacity: 0.8; text-shadow: 0 0 10px currentColor; }
+            to { transform: scale(1.05); opacity: 1; text-shadow: 0 0 30px currentColor; }
+        }
+
+        #overlay button { 
+            padding: 15px 45px; font-size: 18px; background: transparent; 
+            color: #bc13fe; border: 2px solid #bc13fe; border-radius: 50px; 
+            cursor: pointer; font-family: 'Orbitron'; font-weight: bold;
+            box-shadow: 0 0 15px rgba(188, 19, 254, 0.4); transition: 0.3s;
+        }
+
+        #overlay button:hover { background: #bc13fe; color: #fff; box-shadow: 0 0 30px #bc13fe; }
+    </style>
+</head>
+<body>
+
+    <div id="bg-pattern"></div>
+    <h1>TIC TAC TOE</h1>
+    <div class="credit">Made by Tahsan Farhad Ovi</div>
+    <div id="status">YOUR TURN (X)</div>
+    <div class="grid" id="board"></div>
+
+    <div id="overlay">
+        <div id="msg" class="animate-text"></div>
+        <button onclick="resetGame()">RESTART MISSION</button>
+    </div>
+
+<script>
+    const boardSize = 7;
+    const winCondition = 4;
+    let board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+    let gameOver = false;
+
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+    const overlay = document.getElementById('overlay');
+    const msg = document.getElementById('msg');
+
+    function createBoard() {
+        boardElement.innerHTML = '';
+        for (let r = 0; r < boardSize; r++) {
+            for (let c = 0; c < boardSize; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.row = r; cell.dataset.col = c;
+                cell.addEventListener('click', handleMove);
+                boardElement.appendChild(cell);
+            }
+        }
+    }
+
+    function handleMove() {
+        if (gameOver) return;
+        const r = parseInt(this.dataset.row);
+        const c = parseInt(this.dataset.col);
+        if (!board[r][c]) {
+            makeMove(r, c, 'X');
+            if (!gameOver) {
+                statusElement.innerText = "CPU ANALYZING...";
+                setTimeout(computerMove, 600);
+            }
+        }
+    }
+
+    function makeMove(r, c, player) {
+        board[r][c] = player;
+        const index = r * boardSize + c;
+        boardElement.children[index].innerText = player;
+        boardElement.children[index].classList.add(player.toLowerCase());
+        
+        if (checkWin(r, c, player)) {
+            gameOver = true;
+            if(player === 'X') showResult("Shabbas, Tumi Ovir Friend tumi to Parbai", "#f1c40f");
+            else showResult("Bepar na, Abar khelo", "#ff0055");
+        } else if (board.flat().every(cell => cell)) {
+            showResult("MISSION DRAW!", "#fff");
+            gameOver = true;
+        }
+    }
+
+    function showResult(text, color) {
+        setTimeout(() => {
+            overlay.style.display = 'flex';
+            msg.innerText = text;
+            msg.style.color = color;
+        }, 300);
+    }
+
+    function computerMove() {
+        if (gameOver) return;
+        let move = findMove('O', 4) || findMove('X', 4) || findMove('X', 3) || findSmartAggressive();
+        if (move) makeMove(move.r, move.c, 'O');
+        if (!gameOver) statusElement.innerText = "YOUR TURN (X)";
+    }
+
+    function findMove(p, targetCount) {
+        for(let r=0; r<boardSize; r++) {
+            for(let c=0; c<boardSize; c++) {
+                if(!board[r][c]) {
+                    board[r][c] = p;
+                    if(checkInternalWin(r, c, p, targetCount)) { board[r][c] = null; return {r, c}; }
+                    board[r][c] = null;
+                }
+            }
+        }
+        return null;
+    }
+
+    function findSmartAggressive() {
+        let best = null; let maxScore = -1;
+        for(let r=0; r<boardSize; r++) {
+            for(let c=0; c<boardSize; c++) {
+                if(!board[r][c]) {
+                    let score = 0;
+                    for(let dr=-1; dr<=1; dr++) {
+                        for(let dc=-1; dc<=1; dc++) {
+                            let nr=r+dr, nc=c+dc;
+                            if(nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr][nc]) score++;
+                        }
+                    }
+                    if(score > maxScore) { maxScore = score; best = {r, c}; }
+                }
+            }
+        }
+        return best;
+    }
+
+    function checkInternalWin(r, c, p, target) {
+        const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+        for(let [dr, dc] of dirs) {
+            let count = 1;
+            for(let i=1; i<4; i++) {
+                let nr=r+dr*i, nc=c+dc*i;
+                if(nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr][nc]===p) count++; else break;
+            }
+            for(let i=1; i<4; i++) {
+                let nr=r-dr*i, nc=c-dc*i;
+                if(nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr][nc]===p) count++; else break;
+            }
+            if(count >= target) return true;
+        }
+        return false;
+    }
+
+    function checkWin(r, c, p) { return checkInternalWin(r, c, p, winCondition); }
+
+    function resetGame() {
+        board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+        gameOver = false; overlay.style.display = 'none';
+        statusElement.innerText = "YOUR TURN (X)";
+        createBoard();
+    }
+    createBoard();
+</script>
+</body>
+</html>
